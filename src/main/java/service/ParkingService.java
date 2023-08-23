@@ -46,7 +46,6 @@ public class ParkingService {
                     addToParking();
                 }
             } catch (InterruptedException e) {
-                throw new RuntimeException(e);
             }
         });
 
@@ -63,14 +62,6 @@ public class ParkingService {
         thread1.start();
         thread2.start();
         thread4.start();
-//            try {
-//                thread1.join();
-//                thread2.join();
-//                thread4.join();
-//            } catch (InterruptedException e) {
-//                throw new RuntimeException(e);
-//            }
-
 
     }
 
@@ -94,14 +85,13 @@ public class ParkingService {
      * @throws InterruptedException
      */
     public void loadQueu() throws InterruptedException {
-
-        if (queue.size() < queueLength) {
-            long x = (long) (Math.random() * inputGener * 1000);
-            Thread.sleep(x);
-            Transport transport = generTransport();
+        long x = (long) (Math.random() * inputGener * 1000);
+        Thread.sleep(x);
+        Transport transport = generTransport();
+        int countPlaceQueu = (int) queue.stream().map(c->c.getCountPlace()).mapToInt(Integer::valueOf).sum();
+        if (countPlaceQueu<= queueLength) {
             System.out.println("«Легковой/грузовой автомобиль с id = " + transport.getId() + "встал в очередь на въезд.»");
             queue.add(transport);
-
         } else {
             carmageddon = true;
             System.out.println("Все плохо плох плохо!!! Парковка больше не работает");
@@ -131,12 +121,14 @@ public class ParkingService {
 
 
     public synchronized void addToParking() {
-        Transport transport = queue.poll();
-        int countReal = parkingLength - (int) transportList.stream().map(x -> x.getCountPlace()).count();
-        if ((transport != null) && (parkingLength > transportList.size()) && (countReal >= transport.getCountPlace())) {
-            transportList.add(transport);
-            System.out.println("Легковой/грузовой автомобиль с id = " + transport.getId() + "припарковался.");
-
+        if (queue.peek()!=null){
+        int transportSize = queue.peek().getCountPlace();
+        int countReal = parkingLength - (int) transportList.stream().map(x -> x.getCountPlace()).mapToInt(Integer::valueOf).sum();
+        if (countReal >= transportSize){
+                Transport transport = queue.poll();
+                transportList.add(transport);
+                System.out.println("Легковой/грузовой автомобиль с id = " + transport.getId() + "припарковался.");
+            }
         }
     }
 
@@ -144,11 +136,12 @@ public class ParkingService {
     public void serviceInfo() throws InterruptedException {
 
         Thread.sleep(5000);
-        int freePlace = parkingLength - transportList.size();
+        //int freePlace = parkingLength - transportList.size();
+        int freePlace = parkingLength - ((int) transportList.stream().map(x -> x.getCountPlace()).mapToInt(Integer::valueOf).sum());
         int car = (int) transportList.stream().filter(x -> x.getCountPlace() == 1).collect(Collectors.toList()).stream().count();
         int cargo = (int) transportList.stream().filter(x -> x.getCountPlace() == 2).collect(Collectors.toList()).stream().count();
         System.out.printf("Свободных мест: %2$d \n Занято мест: %1$d (легковых авто: %3$d и грузовых авто: %4$d\n" +
-                "Автомобилей, ожидающих в очереди: %5$d \n", transportList.size(), freePlace, car, cargo, queue.size());
+                "Автомобилей, ожидающих в очереди: %5$d (длина очереди %6$d) \n", (int) transportList.stream().map(x -> x.getCountPlace()).mapToInt(Integer::valueOf).sum(), freePlace, car, cargo, queue.size(),queue.stream().map(x -> x.getCountPlace()).mapToInt(Integer::valueOf).sum());
 
     }
 }
