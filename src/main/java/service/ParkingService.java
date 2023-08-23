@@ -30,7 +30,10 @@ public class ParkingService {
 
         Thread thread1 = new Thread(() -> {
             try {
-                loadQueu();
+                while (!carmageddon) {
+                    loadQueu();
+                    addToParking();
+                }
             } catch (InterruptedException e) {
                 throw new RuntimeException(e);
             }
@@ -38,44 +41,36 @@ public class ParkingService {
 
         Thread thread2 = new Thread(() -> {
             try {
-                putAwayTransport();
+                while (!carmageddon) {
+                    putAwayTransport();
+                    addToParking();
+                }
             } catch (InterruptedException e) {
                 throw new RuntimeException(e);
             }
         });
-        Thread thread3 = new Thread(() -> {
-            try {
-                addToParking();
-            } catch (InterruptedException e) {
-                throw new RuntimeException(e);
-            }
-        });
-        Thread thread4 = new Thread(()->{
-            try {
-                serviceInfo();
-            } catch (InterruptedException e) {
-                throw new RuntimeException(e);
-            }
-        });
-        //  while (!carmageddon) {
 
-//           try {
+        Thread thread4 = new Thread(() -> {
+            try {
+                while (!carmageddon) {
+                    serviceInfo();
+                }
+            } catch (InterruptedException e) {
+            }
+        });
+
+
         thread1.start();
         thread2.start();
-        thread3.start();
         thread4.start();
-//               thread2.join();
-//               thread3.join();
+//            try {
 //                thread1.join();
+//                thread2.join();
+//                thread4.join();
+//            } catch (InterruptedException e) {
+//                throw new RuntimeException(e);
+//            }
 
-//           } catch (InterruptedException e) {
-//               throw new RuntimeException(e);
-//           }
-
-        // }
-        // thread1.interrupt();
-        // thread2.interrupt();
-        // thread3.interrupt();
 
     }
 
@@ -99,22 +94,21 @@ public class ParkingService {
      * @throws InterruptedException
      */
     public void loadQueu() throws InterruptedException {
-        while (!carmageddon) {
-            if (queue.size() < queueLength) {
-                long x = (long) (Math.random() * inputGener * 1000);
-                Thread.sleep(x);
-                Transport transport = generTransport();
-                System.out.println("«Легковой/грузовой автомобиль с id = " + transport.getId() + "встал в очередь на въезд.»");
-                queue.add(transport);
 
-            } else {
-                carmageddon = true;
-                System.out.println("Все плохо плох плохо!!! Парковка больше не работает");
+        if (queue.size() < queueLength) {
+            long x = (long) (Math.random() * inputGener * 1000);
+            Thread.sleep(x);
+            Transport transport = generTransport();
+            System.out.println("«Легковой/грузовой автомобиль с id = " + transport.getId() + "встал в очередь на въезд.»");
+            queue.add(transport);
 
-            }
+        } else {
+            carmageddon = true;
+            System.out.println("Все плохо плох плохо!!! Парковка больше не работает");
+
         }
-        throw new InterruptedException();
     }
+
 
     /**
      * Метод удаления транспорта со стоянки
@@ -123,41 +117,38 @@ public class ParkingService {
      * @throws InterruptedException
      */
     public void putAwayTransport() throws InterruptedException {
-        while (!carmageddon) {
-            long x = (long) (Math.random() * outputGener * 1000);
-            Thread.sleep(x);
-            if (carmageddon) throw new InterruptedException();
-            if (transportList.size() > 0) {
-                int z = new Random().nextInt(transportList.size());
-                Transport transport2 = transportList.get(z);
-                transportList.remove(transport2);
-                System.out.println("Легковой/грузовой автомобиль с id = " + transport2.getId() + " покинул парковку.");
-            }
-        } throw new InterruptedException();
-    }
 
-
-    public void addToParking() throws InterruptedException {
-        while (!carmageddon) {
-            if (parkingLength > transportList.size()) {
-                Transport transport = queue.poll();
-                if (transport != null) {
-                    transportList.add(transport);
-                    System.out.println("Легковой/грузовой автомобиль с id = " + transport.getId() + "припарковался.");
-                }
-            }
+        long x = (long) (Math.random() * outputGener * 1000);
+        Thread.sleep(x);
+        if (carmageddon) throw new InterruptedException();
+        if (transportList.size() > 0) {
+            int z = new Random().nextInt(transportList.size());
+            Transport transport2 = transportList.get(z);
+            transportList.remove(transport2);
+            System.out.println("Легковой/грузовой автомобиль с id = " + transport2.getId() + " покинул парковку.");
         }
-        throw new InterruptedException();
     }
+
+
+    public synchronized void addToParking() {
+        Transport transport = queue.poll();
+        int countReal = parkingLength - (int) transportList.stream().map(x -> x.getCountPlace()).count();
+        if ((transport != null) && (parkingLength > transportList.size()) && (countReal >= transport.getCountPlace())) {
+            transportList.add(transport);
+            System.out.println("Легковой/грузовой автомобиль с id = " + transport.getId() + "припарковался.");
+
+        }
+    }
+
 
     public void serviceInfo() throws InterruptedException {
-        while (!carmageddon) {
-            Thread.sleep(5000);
-            int freePlace = parkingLength - transportList.size();
-            int car = (int) transportList.stream().filter(x -> x.getCountPlace() == 1).collect(Collectors.toList()).stream().count();
-            int cargo = (int) transportList.stream().filter(x -> x.getCountPlace() == 2).collect(Collectors.toList()).stream().count();
-            System.out.printf("Свободных мест: %2$d \n Занято мест: %1$d (легковых авто: %3$d и грузовых авто: %4$d\n" +
-                    "Автомобилей, ожидающих в очереди: %5$d \n", transportList.size(), freePlace, car, cargo, queue.size());
-        } throw new InterruptedException();
+
+        Thread.sleep(5000);
+        int freePlace = parkingLength - transportList.size();
+        int car = (int) transportList.stream().filter(x -> x.getCountPlace() == 1).collect(Collectors.toList()).stream().count();
+        int cargo = (int) transportList.stream().filter(x -> x.getCountPlace() == 2).collect(Collectors.toList()).stream().count();
+        System.out.printf("Свободных мест: %2$d \n Занято мест: %1$d (легковых авто: %3$d и грузовых авто: %4$d\n" +
+                "Автомобилей, ожидающих в очереди: %5$d \n", transportList.size(), freePlace, car, cargo, queue.size());
+
     }
 }

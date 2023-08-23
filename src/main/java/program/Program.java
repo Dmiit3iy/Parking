@@ -4,7 +4,7 @@ import service.ParkingService;
 
 public class Program {
     public static void main(String[] args) {
-        ParkingService parkingService = new ParkingService( 10,300,1,4);
+        ParkingService parkingService = new ParkingService( 20,15,1,12);
         parkingService.start();
     }
 }
